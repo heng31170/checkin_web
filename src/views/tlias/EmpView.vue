@@ -9,8 +9,8 @@
                             <template slot="title"><i class="el-icon-message"></i>系统信息管理</template>
 
                             <!-- <el-menu-item index="1-1">
-                  <router-link to="/dept">部门管理</router-link>
-                </el-menu-item> -->
+                            <router-link to="/dept">部门管理</router-link>
+                            </el-menu-item> -->
                             <el-menu-item index="1-2">
                                 <router-link to="/emp">拔剑班管理</router-link>
                             </el-menu-item>
@@ -21,25 +21,28 @@
                     <!-- 表单 -->
                     <el-form :inline="true" :model="searchForm" class="demo-form-inline">
                         <el-form-item label="姓名">
-                            <el-input v-model="searchForm.name" placeholder="姓名"></el-input>
+                            <el-input v-model="searchForm.empname" placeholder="姓名"></el-input>
                         </el-form-item>
                         <el-form-item label="性别">
                             <el-select v-model="searchForm.gender" placeholder="性别">
-                                <el-option label="男" value="1"></el-option>
-                                <el-option label="女" value="2"></el-option>
-                                <el-option label="不限" value="3"></el-option>
+                                <el-option label="男" value="男"></el-option>
+                                <el-option label="女" value="女"></el-option>
+                                <el-option label="不限" value=""></el-option>
                             </el-select>
                         </el-form-item>
 
                         <el-form-item label="入职日期">
                             <!-- 日期选择器 -->
-                            <el-date-picker v-model="searchForm.entrydate" type="daterange" range-separator="至"
+                            <el-date-picker v-model="searchForm.entryDate" type="daterange" range-separator="至"
                                 start-placeholder="开始日期" end-placeholder="结束日期">
                             </el-date-picker>
                         </el-form-item>
 
                         <el-form-item>
-                            <el-button type="primary" @click="onSubmit">查询</el-button>
+                            <el-button type="primary" @click="queEmp">查询</el-button>
+                        </el-form-item>
+                        <el-form-item>
+                            <el-button type="primary" @click="addEmp">新增员工</el-button>
                         </el-form-item>
                     </el-form>
 
@@ -124,9 +127,9 @@ export default {
         return {
             tableData: [],
             searchForm: {
-                name: "",
+                empname: "",
                 gender: "",
-                entrydate: [],
+                entryDate: [],
             },
             dialogDelVisible: false,
             dialogCheckVisible: false,
@@ -136,6 +139,29 @@ export default {
         };
     },
     methods: {
+        // 查询员工
+        queEmp() {
+            const {empname, gender, entryDate } = this.searchForm;
+            console.log("姓名:",empname);
+            console.log("性别:",gender);
+            console.log("入职日期:",entryDate);
+            axios.get(`${API_URL}/api/emp/search`,{
+                params:{
+                    empname,
+                    gender,
+                    start: entryDate[0],
+                    end: entryDate[1]
+                }
+            })
+            .then((response) => {
+                this.tableData = response.data.empList;
+            })
+            .catch((error) => {
+                console.log("查询失败:",error);
+                alert("查询失败!")
+            })
+            
+        },
         // 获取id并弹出删除对话框
         getIdAndDelDialog(id) {
             this.empId = id;
