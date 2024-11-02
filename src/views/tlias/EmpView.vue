@@ -55,7 +55,14 @@
                         <el-table-column prop="lastOperationTime" label="最后操作时间" width="230"></el-table-column>
                         <el-table-column prop="action" label="操作" width="230">
                             <template slot-scope="scope">
-                                <el-button type="primary" size="mini" @click="getIdAndCheckDialog(scope.row.id)">打卡</el-button>
+                                <el-button v-if="!isCheck[scope.row.id]" type="primary" size="mini"
+                                    @click="getIdAndCheckDialog(scope.row.id)">
+                                    打卡
+                                </el-button>
+                                <el-button v-else type="success" size="mini"
+                                    @click="getIdAndUnCheckDialog(scope.row.id)">
+                                    已打卡
+                                </el-button>
                                 <el-button type="primary" size="mini">编辑</el-button>
                                 <el-button type="danger" size="mini"
                                     @click="getIdAndDelDialog(scope.row.id)">删除</el-button>
@@ -75,7 +82,7 @@
                     </el-dialog>
                     <!-- 结束删除对话框 -->
                     <!-- 弹出对话框,是否签到  -->
-                    <el-dialog title="确定给改员工签到?" :visible.sync="dialogCheckVisible">
+                    <el-dialog title="确定给该员工签到?" :visible.sync="dialogCheckVisible">
                         <el-form>
                             <el-form-item>
                                 <el-button type="primary" @click="confirmCheck">确定</el-button>
@@ -84,6 +91,16 @@
                         </el-form>
                     </el-dialog>
                     <!-- 结束签到对话框 -->
+                    <!-- 弹出对话框,是否取消签到  -->
+                    <el-dialog title="确定给该员工取消签到?" :visible.sync="dialogUnCheckVisible">
+                        <el-form>
+                            <el-form-item>
+                                <el-button type="primary" @click="confirmUnCheck">确定</el-button>
+                                <el-button @click="dialogUnCheckVisible = false">取消</el-button>
+                            </el-form-item>
+                        </el-form>
+                    </el-dialog>
+                    <!-- 结束取消签到对话框 -->
 
                     <br /><br />
                     <!-- 分页条 -->
@@ -100,6 +117,8 @@
 
 <script>
 import axios from "axios";
+import { API_URL } from "@/config";
+// import { response } from "express";
 export default {
     data() {
         return {
@@ -111,7 +130,9 @@ export default {
             },
             dialogDelVisible: false,
             dialogCheckVisible: false,
+            dialogUnCheckVisible: false,
             empId: null,
+            isCheck: {},
         };
     },
     methods: {
@@ -125,20 +146,31 @@ export default {
             this.delEmp(this.empId);
             this.dialogDelVisible = false;
         },
-        // 获取id并弹出签到对话框
+        // 签到对话框
         getIdAndCheckDialog(id) {
             this.empId = id;
             this.dialogCheckVisible = true;
         },
         // 确认签到并关闭对话框
         confirmCheck() {
-            alert("id是"+this.empId);
+            this.addCheck(this.empId);
             this.dialogCheckVisible = false;
         },
+        // 取消签到对话框
+        getIdAndUnCheckDialog(id) {
+            this.empId = id;
+            this.dialogUnCheckVisible = true;
+        },
+        // 确认取消签到并关闭对话框
+        confirmUnCheck() {
+            this.delCheck(this.empId);
+            this.dialogUnCheckVisible = false;
+        },
+
         // 获取员工数据
         getEmp() {
             axios
-                .get("http://127.0.0.1:5678/api/emp")
+                .get(`${API_URL}/api/emp`)
                 .then((response) => {
                     this.tableData = response.data.empList;
                 })
@@ -150,19 +182,59 @@ export default {
         // 删除员工
         delEmp(id) {
             axios
-                .post(`http://127.0.0.1:5678/api/emp/delete?id=${id}`)
+                .post(`${API_URL}/api/emp/delete?id=${id}`)
                 .then(() => {
                     this.getEmp(); // 刷新
-                    alert("删除成功!");
+                    // alert("删除成功!");
                 })
                 .catch((error) => {
                     console.error("删除失败,请重试!", error);
                     alert("删除失败!");
                 });
         },
+        // 获取打卡状态
+        getAllCheck() {
+            axios
+                .get(`${API_URL}/api/checkins`)
+                .then((response) => {
+                    response.data.isCheck.forEach(item => {
+                        this.$set(this.isCheck, item.empId, item.isCheck);
+                    })
+                })
+                .catch((error) => {
+                    console.log("获取签到信息失败:", error);
+                    alert("无法获取签到信息" + (error.response ? error.response.data : error.message));
+                })
+        },
+        // 打卡
+        addCheck(id) {
+            axios
+                .post(`${API_URL}/api/addcheck?id=${id}`)
+                .then(() => {
+                    this.getAllCheck();
+                    // alert("打卡成功!");
+                })
+                .catch((error) => {
+                    alert("打卡失败!原因是：" + error);
+                })
+        },
+        // 取消打卡
+        delCheck(id) {
+            axios
+                .post(`${API_URL}/api/delcheck?id=${id}`)
+                .then(() => {
+                    this.getAllCheck();
+                    // alert("取消打卡成功!");
+                })
+                .catch((error) => {
+                    alert("取消打卡失败!原因是：" + error);
+                })
+        },
     },
     mounted() {
         this.getEmp();
+        this.getAllCheck();
+        // this.isCheck[11] = true;  // 员工 ID 为 1 已打卡
     },
 };
 </script>
