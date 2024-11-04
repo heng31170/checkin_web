@@ -19,12 +19,12 @@
                 </el-aside>
                 <el-main>
                     <!-- 表单 -->
-                    <el-form :inline="true" :model="searchForm" class="demo-form-inline">
+                    <el-form :inline="true" :model="searchEmp" class="demo-form-inline">
                         <el-form-item label="姓名">
-                            <el-input v-model="searchForm.empname" placeholder="姓名"></el-input>
+                            <el-input v-model="searchEmp.empname" placeholder="姓名"></el-input>
                         </el-form-item>
                         <el-form-item label="性别">
-                            <el-select v-model="searchForm.gender" placeholder="性别">
+                            <el-select v-model="searchEmp.gender" placeholder="性别">
                                 <el-option label="男" value="男"></el-option>
                                 <el-option label="女" value="女"></el-option>
                                 <el-option label="不限" value=""></el-option>
@@ -33,7 +33,7 @@
 
                         <el-form-item label="入职日期">
                             <!-- 日期选择器 -->
-                            <el-date-picker v-model="searchForm.entryDate" type="daterange" range-separator="至"
+                            <el-date-picker v-model="searchEmp.entryDate" type="daterange" range-separator="至"
                                 start-placeholder="开始日期" end-placeholder="结束日期">
                             </el-date-picker>
                         </el-form-item>
@@ -42,7 +42,7 @@
                             <el-button type="primary" @click="queEmp">查询</el-button>
                         </el-form-item>
                         <el-form-item>
-                            <el-button type="primary" @click="addEmp">新增员工</el-button>
+                            <el-button type="primary" @click="dialogAddEmpVisible = true">新增员工</el-button>
                         </el-form-item>
                     </el-form>
 
@@ -51,6 +51,10 @@
                         <el-table-column prop="name" label="姓名" width="140">
                         </el-table-column>
                         <el-table-column prop="image" label="头像" width="140">
+                            <template slot-scope="scope">
+                                <img :src="scope.row.image" alt="头像"
+                                    style="width: 40%; height: 40%; border-radius: 50%;" />
+                            </template>
                         </el-table-column>
                         <el-table-column prop="gender" label="性别" width="140"></el-table-column>
                         <el-table-column prop="position" label="职位" width="140"></el-table-column>
@@ -66,7 +70,8 @@
                                     @click="getIdAndUnCheckDialog(scope.row.id)">
                                     已打卡
                                 </el-button>
-                                <el-button type="primary" size="mini">编辑</el-button>
+                                <el-button type="primary" size="mini"
+                                    @click="getIdAndChangeDialog(scope.row.id)">编辑</el-button>
                                 <el-button type="danger" size="mini"
                                     @click="getIdAndDelDialog(scope.row.id)">删除</el-button>
                             </template>
@@ -104,6 +109,40 @@
                         </el-form>
                     </el-dialog>
                     <!-- 结束取消签到对话框 -->
+                    <!-- 编辑员工对话框 -->
+                    <el-dialog title="编辑员工" :visible.sync="dialogChangeEmpVisible">
+                        <el-form ref="form" :model="changeEmp" label-width="80px">
+                            <el-form-item label="姓名">
+                                <el-input v-model="changeEmp.name"></el-input>
+                            </el-form-item>
+                            <el-form-item label="头像">
+                                <el-upload class="upload-demo" :on-change="handleFileChange"
+                                    :before-upload="beforeUpload" :show-file-list="false" action="">
+                                    <el-button size="small" type="primary">点击上传头像</el-button>
+                                </el-upload>
+                                <img v-if="changeEmp.image" :src="changeEmp.image" class="avatar" />
+                            </el-form-item>
+                            <el-form-item label="性别">
+                                <el-select v-model="changeEmp.gender" placeholder="请选择性别">
+                                    <el-option label="男" value="男"></el-option>
+                                    <el-option label="女" value="女"></el-option>
+                                </el-select>
+                            </el-form-item>
+                            <el-form-item label="职位">
+                                <el-input v-model="changeEmp.position"></el-input>
+                            </el-form-item>
+                            <el-form-item label="入职日期">
+                                <el-date-picker type="date" placeholder="选择入职日期" v-model="changeEmp.entryDate"
+                                    style="width: 100%"></el-date-picker>
+                            </el-form-item>
+
+                            <el-form-item>
+                                <el-button type="primary" @click="confirmChangeEmp">确定</el-button>
+                                <el-button @click="cancelChangeEmp">取消</el-button>
+                            </el-form-item>
+                        </el-form>
+                    </el-dialog>
+                    <!-- 结束编辑员工对话框 -->
 
                     <br /><br />
                     <!-- 分页条 -->
@@ -126,41 +165,126 @@ export default {
     data() {
         return {
             tableData: [],
-            searchForm: {
+            searchEmp: {
                 empname: "",
                 gender: "",
                 entryDate: [],
             },
+            changeEmp: {
+                name: "",
+                image: null,
+                gender: "",
+                position: "",
+                entryDate: "",
+            },
             dialogDelVisible: false,
             dialogCheckVisible: false,
             dialogUnCheckVisible: false,
+            dialogChangeEmpVisible: false,
             empId: null,
             isCheck: {},
+            selectedFile: null,
         };
     },
     methods: {
-        // 查询员工
+        // 处理文件选择
+        handleFileChange(file) {
+            this.selectedFile = file.raw;
+        },
+        // 获取id并且弹出编辑对话框
+        getIdAndChangeDialog(id) {
+            this.empId = id;
+            axios
+                .get(`${API_URL}/api/emp/${id}`)
+                .then((response) => {
+                    this.changeEmp = response.data;
+                    this.dialogChangeEmpVisible = true;
+                })
+                .catch((error) => {
+                    log.error("获取员工信息失败", error);
+                })
+        },
+        // 确认编辑并关闭对话框
+        confirmChangeEmp() {
+            const formData = new FormData();
+            const { name, image, gender, position, entryDate } = this.changeEmp;
+            // 添加json数据
+            formData.append("json", JSON.stringify({
+                id: this.empId,
+                name,
+                gender,
+                position,
+                entryDate,
+                image,
+            }));
+            // 添加文件
+            if (this.selectedFile) {
+                formData.append("file", this.selectedFile);
+            }
+            axios
+                .post(`${API_URL}/api/emp/update`, formData, {
+                    headers: {
+                        'Content-Type': 'multipart/form-data'
+                    }
+                })
+                .then((response) => {
+                    this.getEmp();
+                    this.changeEmp.image = response.data.fileUrl;
+                    this.dialogChangeEmpVisible = false;
+                    this.$message.success("员工信息更新成功!")
+                })
+                .catch((error) => {
+                    console.error("更新员工信息失败:", error);
+                })
+        },
+        // 取消编辑对话框
+        cancelChangeEmp() {
+            this.dialogChangeEmpVisible = false;
+        },
+        // 处理上传成功事件
+        handleUploadSuccess(response, file) {
+            // this.changeEmp.image = file; // 将文件对象存储在 changeEmp 中
+            this.changeEmp.image = response.fileUrl; // 假设后端返回的结构是 { fileUrl: '...' }    ???
+        },
+        // 上传前的处理
+        beforeUpload(file) {
+            const isImage = file.type.startsWith('image/');
+            if (!isImage) {
+                this.$message.error('上传头像只能是图片!');
+            }
+            return false;
+        },
+        // 分页大小变化处理
+        handleSizeChange(size) {
+            console.log('每页条数变化:', size);
+        },
+        // 当前页变化处理
+        handleCurrentChange(page) {
+            console.log('当前页变化:', page);
+        },
+        // 条件查询员工
         queEmp() {
-            const {empname, gender, entryDate } = this.searchForm;
-            console.log("姓名:",empname);
-            console.log("性别:",gender);
-            console.log("入职日期:",entryDate);
-            axios.get(`${API_URL}/api/emp/search`,{
-                params:{
-                    empname,
-                    gender,
-                    start: entryDate[0],
-                    end: entryDate[1]
-                }
-            })
-            .then((response) => {
-                this.tableData = response.data.empList;
-            })
-            .catch((error) => {
-                console.log("查询失败:",error);
-                alert("查询失败!")
-            })
-            
+            const { empname, gender, entryDate } = this.searchEmp;
+            console.log("姓名:", empname);
+            console.log("性别:", gender);
+            console.log("入职日期:", entryDate);
+            axios
+                .get(`${API_URL}/api/emp/search`, {
+                    params: {
+                        empname,
+                        gender,
+                        start: entryDate[0],
+                        end: entryDate[1],
+                    },
+                })
+                .then((response) => {
+                    this.tableData = response.data.empList;
+                    this.$message.success("员工信息查询成功!")
+                })
+                .catch((error) => {
+                    console.log("查询失败:", error);
+                    alert("查询失败!");
+                });
         },
         // 获取id并弹出删除对话框
         getIdAndDelDialog(id) {
@@ -171,6 +295,7 @@ export default {
         confirmDel() {
             this.delEmp(this.empId);
             this.dialogDelVisible = false;
+            this.$message.success("员工删除成功!")
         },
         // 签到对话框
         getIdAndCheckDialog(id) {
@@ -181,6 +306,7 @@ export default {
         confirmCheck() {
             this.addCheck(this.empId);
             this.dialogCheckVisible = false;
+            this.$message.success("签到成功!")
         },
         // 取消签到对话框
         getIdAndUnCheckDialog(id) {
@@ -191,9 +317,10 @@ export default {
         confirmUnCheck() {
             this.delCheck(this.empId);
             this.dialogUnCheckVisible = false;
+            this.$message.success("取消签到成功!")
         },
 
-        // 获取员工数据
+        // 获取所有员工数据
         getEmp() {
             axios
                 .get(`${API_URL}/api/emp`)
@@ -223,14 +350,17 @@ export default {
             axios
                 .get(`${API_URL}/api/checkins`)
                 .then((response) => {
-                    response.data.isCheck.forEach(item => {
+                    response.data.isCheck.forEach((item) => {
                         this.$set(this.isCheck, item.empId, item.isCheck);
-                    })
+                    });
                 })
                 .catch((error) => {
                     console.log("获取签到信息失败:", error);
-                    alert("无法获取签到信息" + (error.response ? error.response.data : error.message));
-                })
+                    alert(
+                        "无法获取签到信息" +
+                        (error.response ? error.response.data : error.message)
+                    );
+                });
         },
         // 打卡
         addCheck(id) {
@@ -242,7 +372,7 @@ export default {
                 })
                 .catch((error) => {
                     alert("打卡失败!原因是：" + error);
-                })
+                });
         },
         // 取消打卡
         delCheck(id) {
@@ -254,7 +384,7 @@ export default {
                 })
                 .catch((error) => {
                     alert("取消打卡失败!原因是：" + error);
-                })
+                });
         },
     },
     mounted() {
@@ -268,4 +398,11 @@ export default {
 
 
 
-<style></style>
+<style>
+.avatar {
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    margin-top: 10px;
+}
+</style>
