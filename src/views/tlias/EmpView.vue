@@ -33,8 +33,7 @@
 
                         <el-form-item label="入职日期">
                             <!-- 日期选择器 -->
-                            <el-date-picker v-model="searchEmp.entryDate" type="daterange" range-separator="至"
-                                start-placeholder="开始日期" end-placeholder="结束日期">
+                            <el-date-picker v-model="searchEmp.entryDate" placeholder="选择入职日期">
                             </el-date-picker>
                         </el-form-item>
 
@@ -143,7 +142,35 @@
                         </el-form>
                     </el-dialog>
                     <!-- 结束编辑员工对话框 -->
+                     
+                    <!-- 新增员工对话框 -->
+                    <el-dialog title="新增员工" :visible.sync="dialogAddEmpVisible">
+                        <el-form ref="form" :model="AddEmp" label-width="80px">
+                            <el-form-item label="姓名">
+                                <el-input v-model="AddEmp.name"></el-input>
+                            </el-form-item>
+                            <el-form-item label="性别">
+                                <el-select v-model="AddEmp.gender" placeholder="请选择性别">
+                                    <el-option label="男" value="男"></el-option>
+                                    <el-option label="女" value="女"></el-option>
+                                </el-select>
+                            </el-form-item>
+                            <el-form-item label="职位">
+                                <el-input v-model="AddEmp.position"></el-input>
+                            </el-form-item>
+                            <el-form-item label="入职日期">
+                                <el-date-picker type="date" placeholder="选择入职日期" v-model="AddEmp.entryDate"
+                                    style="width: 100%"></el-date-picker>
+                            </el-form-item>
 
+                            <el-form-item>
+                                <el-button type="primary" @click="confirmAddEmp">确定</el-button>
+                                <el-button @click="dialogAddEmpVisible = false">取消</el-button>
+                            </el-form-item>
+                        </el-form>
+                    </el-dialog>
+                    <!-- 结束新增员工对话框 -->
+                     
                     <br /><br />
                     <!-- 分页条 -->
                     <el-pagination background layout="total,sizes,prev, pager, next,jumper" :total="1000"
@@ -160,7 +187,6 @@
 <script>
 import axios from "axios";
 import { API_URL } from "@/config";
-// import { response } from "express";
 export default {
     data() {
         return {
@@ -168,7 +194,7 @@ export default {
             searchEmp: {
                 empname: "",
                 gender: "",
-                entryDate: [],
+                entryDate: "",
             },
             changeEmp: {
                 name: "",
@@ -177,16 +203,46 @@ export default {
                 position: "",
                 entryDate: "",
             },
+            AddEmp: {
+                name: "",
+                gender: "",
+                position: "",
+                entryDate: "",
+            },
             dialogDelVisible: false,
             dialogCheckVisible: false,
             dialogUnCheckVisible: false,
             dialogChangeEmpVisible: false,
+            dialogAddEmpVisible: false,
             empId: null,
             isCheck: {},
             selectedFile: null,
         };
     },
     methods: {
+        // 确认新增员工
+        confirmAddEmp() {
+            axios
+            .post(`${API_URL}/api/emp/add`, this.AddEmp)
+            .then(() => {
+                this.$message.success("新增员工成功!")
+                this.dialogAddEmpVisible = false;
+                this.resetAddEmp();
+                this.getEmp();
+            })
+            .catch(error => {
+                this.$message.error('员工添加失败!'+error.message);
+            });
+        },
+        // 清空员工表单
+        resetAddEmp() {
+            this.AddEmp = {
+                name: "",
+                gender: "",
+                position: "",
+                entryDate: ""
+            }
+        },
         // 处理文件选择
         handleFileChange(file) {
             this.selectedFile = file.raw;
@@ -229,7 +285,7 @@ export default {
                 })
                 .then((response) => {
                     this.getEmp();
-                    this.changeEmp.image = response.data.fileUrl;
+                    //this.changeEmp.image = response.data.fileUrl;
                     this.dialogChangeEmpVisible = false;
                     this.$message.success("员工信息更新成功!")
                 })
@@ -241,11 +297,7 @@ export default {
         cancelChangeEmp() {
             this.dialogChangeEmpVisible = false;
         },
-        // 处理上传成功事件
-        handleUploadSuccess(response, file) {
-            // this.changeEmp.image = file; // 将文件对象存储在 changeEmp 中
-            this.changeEmp.image = response.fileUrl; // 假设后端返回的结构是 { fileUrl: '...' }    ???
-        },
+
         // 上传前的处理
         beforeUpload(file) {
             const isImage = file.type.startsWith('image/');
@@ -273,8 +325,7 @@ export default {
                     params: {
                         empname,
                         gender,
-                        start: entryDate[0],
-                        end: entryDate[1],
+                        entryDate
                     },
                 })
                 .then((response) => {
