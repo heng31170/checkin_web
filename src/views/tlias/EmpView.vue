@@ -18,10 +18,13 @@
                     </el-menu>
                 </el-aside>
                 <el-main>
-                    <!-- 表单 -->
+                    <!-- 表单 查询员工 -->
                     <el-form :inline="true" :model="searchEmp" class="demo-form-inline">
                         <el-form-item label="姓名">
-                            <el-input v-model="searchEmp.empname" placeholder="姓名"></el-input>
+                            <el-input v-model="searchEmp.name" placeholder="姓名"></el-input>
+                        </el-form-item>
+                        <el-form-item label="职位">
+                            <el-input v-model="searchEmp.position" placeholder="职位"></el-input>
                         </el-form-item>
                         <el-form-item label="性别">
                             <el-select v-model="searchEmp.gender" placeholder="性别">
@@ -31,9 +34,9 @@
                             </el-select>
                         </el-form-item>
 
-                        <el-form-item label="入职日期">
+                        <el-form-item label="入职日期(起)">
                             <!-- 日期选择器 -->
-                            <el-date-picker v-model="searchEmp.entryDate" placeholder="选择入职日期">
+                            <el-date-picker type="date" v-model="searchEmp.entryDate" placeholder="选择入职日期">
                             </el-date-picker>
                         </el-form-item>
 
@@ -142,7 +145,7 @@
                         </el-form>
                     </el-dialog>
                     <!-- 结束编辑员工对话框 -->
-                     
+
                     <!-- 新增员工对话框 -->
                     <el-dialog title="新增员工" :visible.sync="dialogAddEmpVisible">
                         <el-form ref="form" :model="AddEmp" label-width="80px">
@@ -170,11 +173,13 @@
                         </el-form>
                     </el-dialog>
                     <!-- 结束新增员工对话框 -->
-                     
+
                     <br /><br />
                     <!-- 分页条 -->
-                    <el-pagination background layout="total,sizes,prev, pager, next,jumper" :total="1000"
-                        @size-change="handleSizeChange" @current-change="handleCurrentChange">
+                    <el-pagination background layout="total,sizes,prev, pager, next,jumper" :total="pagination.total"
+                        :page-sizes="[5, 10, 20, 50, 100]" :page-size="pagination.pageSize"
+                        :current-page="pagination.currentPage" @size-change="handleSizeChange"
+                        @current-change="handleCurrentChange">
                     </el-pagination>
                 </el-main>
             </el-container>
@@ -187,15 +192,25 @@
 <script>
 import axios from "axios";
 import { API_URL } from "@/config";
+import moment from 'moment';
 export default {
     data() {
         return {
             tableData: [],
+            // 条件查询
             searchEmp: {
-                empname: "",
+                name: "",
                 gender: "",
                 entryDate: "",
+                position: "",
             },
+            // 分页信息
+            pagination: {
+                currentPage: 1,
+                pageSize: 5,
+                total: 0
+            },
+            // 编辑员工
             changeEmp: {
                 name: "",
                 image: null,
@@ -203,6 +218,7 @@ export default {
                 position: "",
                 entryDate: "",
             },
+            // 新增员工
             AddEmp: {
                 name: "",
                 gender: "",
@@ -222,17 +238,20 @@ export default {
     methods: {
         // 确认新增员工
         confirmAddEmp() {
+            const formattedDate = moment(this.AddEmp.entryDate).format('YYYY-MM-DD');
+            this.AddEmp.entryDate = formattedDate;
+
             axios
-            .post(`${API_URL}/api/emp/add`, this.AddEmp)
-            .then(() => {
-                this.$message.success("新增员工成功!")
-                this.dialogAddEmpVisible = false;
-                this.resetAddEmp();
-                this.getEmp();
-            })
-            .catch(error => {
-                this.$message.error('员工添加失败!'+error.message);
-            });
+                .post(`${API_URL}/api/emp/add`, this.AddEmp)
+                .then(() => {
+                    this.$message.success("新增员工成功!")
+                    this.dialogAddEmpVisible = false;
+                    this.resetAddEmp();
+                    this.getEmp();
+                })
+                .catch(error => {
+                    this.$message.error('员工添加失败!' + error.message);
+                });
         },
         // 清空员工表单
         resetAddEmp() {
@@ -262,6 +281,8 @@ export default {
         },
         // 确认编辑并关闭对话框
         confirmChangeEmp() {
+            const formattedDate = moment(this.changeEmp.entryDate).format('YYYY-MM-DD');
+            this.changeEmp.entryDate = formattedDate;
             const formData = new FormData();
             const { name, image, gender, position, entryDate } = this.changeEmp;
             // 添加json数据
@@ -308,33 +329,38 @@ export default {
         },
         // 分页大小变化处理
         handleSizeChange(size) {
-            console.log('每页条数变化:', size);
+            this.pagination.pageSize = size;
+            this.getEmp();
         },
         // 当前页变化处理
         handleCurrentChange(page) {
-            console.log('当前页变化:', page);
+            this.pagination.currentPage = page;
+            this.getEmp();
         },
         // 条件查询员工
         queEmp() {
-            const { empname, gender, entryDate } = this.searchEmp;
-            console.log("姓名:", empname);
-            console.log("性别:", gender);
-            console.log("入职日期:", entryDate);
+            const { name, gender, entryDate, position } = this.searchEmp;
+
+            // 检查入职日期是否存在，如果存在，则格式化
+            const formattedDate = entryDate ? moment(entryDate).format('YYYY-MM-DD') : null;
+
+            // 构建查询参数对象
+            const params = {
+                name,
+                gender,
+                ...(formattedDate ? { entryDate: formattedDate } : {}), // 仅在日期存在时添加
+                position
+            };
+
             axios
-                .get(`${API_URL}/api/emp/search`, {
-                    params: {
-                        empname,
-                        gender,
-                        entryDate
-                    },
-                })
+                .get(`${API_URL}/api/emp/search`, { params })
                 .then((response) => {
                     this.tableData = response.data.empList;
-                    this.$message.success("员工信息查询成功!")
+                    this.$message.success("员工信息查询成功!");
                 })
                 .catch((error) => {
-                    console.log("查询失败:", error);
-                    alert("查询失败!");
+                    console.log("查询失败:", error.response ? error.response.data : error);
+                    alert("查询失败: " + (error.response ? error.response.data.message : error.message));
                 });
         },
         // 获取id并弹出删除对话框
@@ -373,10 +399,15 @@ export default {
 
         // 获取所有员工数据
         getEmp() {
+            const params = {
+                current: this.pagination.currentPage,
+                size: this.pagination.pageSize
+            }
             axios
-                .get(`${API_URL}/api/emp`)
+                .get(`${API_URL}/api/emp/page`, { params })
                 .then((response) => {
-                    this.tableData = response.data.empList;
+                    this.tableData = response.data.records;
+                    this.pagination.total = response.data.total;
                 })
                 .catch((error) => {
                     console.log("请求失败:", error);
