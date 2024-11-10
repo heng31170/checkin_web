@@ -8,10 +8,22 @@ const routes = [
     path: '/',
     redirect: '/emp'
   },
+  // 其他路径
   {
     path: '/emp',
     name: 'emp',
     component: () => import('../views/tlias/EmpView.vue')
+  },
+  {
+    path: '/login',
+    name: 'login',
+    component: () => import('../views/tlias/LoginView.vue')
+  }
+  ,
+  {
+    path: '/register',
+    name: 'register',
+    component: () => import('../views/tlias/RegisterView.vue')
   }
 ]
 

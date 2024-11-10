@@ -8,9 +8,9 @@
                         <el-submenu index="1">
                             <template slot="title"><i class="el-icon-message"></i>系统信息管理</template>
 
-                            <!-- <el-menu-item index="1-1">
-                            <router-link to="/dept">部门管理</router-link>
-                            </el-menu-item> -->
+                            <el-menu-item index="1-1">
+                            <router-link to="/login">登录管理</router-link>
+                            </el-menu-item>
                             <el-menu-item index="1-2">
                                 <router-link to="/emp">拔剑班管理</router-link>
                             </el-menu-item>
@@ -149,6 +149,9 @@
                     <!-- 新增员工对话框 -->
                     <el-dialog title="新增员工" :visible.sync="dialogAddEmpVisible">
                         <el-form ref="form" :model="AddEmp" label-width="80px">
+                            <el-form-item label="账户">
+                                <el-input v-model="AddEmp.account"></el-input>
+                            </el-form-item>
                             <el-form-item label="姓名">
                                 <el-input v-model="AddEmp.name"></el-input>
                             </el-form-item>
@@ -207,7 +210,7 @@ export default {
             // 分页信息
             pagination: {
                 currentPage: 1,
-                pageSize: 5,
+                pageSize: 10,
                 total: 0
             },
             // 编辑员工
@@ -220,6 +223,7 @@ export default {
             },
             // 新增员工
             AddEmp: {
+                account: "",
                 name: "",
                 gender: "",
                 position: "",
