@@ -5,7 +5,17 @@
             <el-main style="display: flex; align-items: center; justify-content: center;">
                 <el-form :model="loginForm" status-icon :rules="rules" ref="loginForm" label-width="100px" class="demo-ruleForm">
                     <el-form-item label="账号" prop="account">
-                        <el-input v-model="loginForm.account" autocomplete="off"></el-input>
+                        <el-input v-model="loginForm.account" autocomplete="off">
+                            <template #append>
+                                <el-button 
+                                    v-if="loginForm.account" 
+                                    icon="el-icon-close" 
+                                    @click="clearAccount" 
+                                    size="small" 
+                                    class="clear-button">
+                                </el-button>
+                            </template>
+                        </el-input>
                     </el-form-item>
                     <el-form-item label="密码" prop="passwd">
                         <el-input v-model="loginForm.passwd" :type="passwordFieldType" autocomplete="off">
@@ -15,6 +25,13 @@
                                     @click="togglePasswordVisibility" 
                                     size="small" 
                                     class="toggle-password-button">
+                                </el-button>
+                                <el-button 
+                                    v-if="loginForm.passwd" 
+                                    icon="el-icon-close" 
+                                    @click="clearPassword" 
+                                    size="small" 
+                                    class="clear-button">
                                 </el-button>
                             </template>
                         </el-input>
@@ -42,7 +59,7 @@ export default {
                 passwd: ''
             },
             rememberMe: false,
-            passwordFieldType: 'password', // 密码字段类型
+            passwordFieldType: 'password',
             rules: {
                 account: [
                     { required: true, message: '请输入账号', trigger: 'blur' }
@@ -54,9 +71,9 @@ export default {
         };
     },
     created() {
-        const savedAccount = localStorage.getItem('savedAccount');
-        const savedPassword = localStorage.getItem('savedPassword');
-        const savedRememberMe = localStorage.getItem('rememberMe') === 'true';
+        const savedAccount = sessionStorage.getItem('savedAccount');
+        const savedPassword = sessionStorage.getItem('savedPassword');
+        const savedRememberMe = sessionStorage.getItem('rememberMe') === 'true';
         
         if (savedAccount) {
             this.loginForm.account = savedAccount;
@@ -71,15 +88,16 @@ export default {
             axios.post(`${API_URL}/api/login`, this.loginForm)
                 .then(response => {
                     this.$message.success("登录成功!");
+                    this.$store.dispatch('updateCurEmp',response.data.Emp);
                     
                     if (this.rememberMe) {
-                        localStorage.setItem('savedAccount', this.loginForm.account);
-                        localStorage.setItem('savedPassword', this.loginForm.passwd);
-                        localStorage.setItem('rememberMe', 'true');
+                        sessionStorage.setItem('savedAccount', this.loginForm.account);
+                        sessionStorage.setItem('savedPassword', this.loginForm.passwd);
+                        sessionStorage.setItem('rememberMe', 'true');
                     } else {
-                        localStorage.removeItem('savedAccount');
-                        localStorage.removeItem('savedPassword');
-                        localStorage.setItem('rememberMe', 'false');
+                        sessionStorage.removeItem('savedAccount');
+                        sessionStorage.removeItem('savedPassword');
+                        sessionStorage.setItem('rememberMe', 'false');
                     }
 
                     this.$router.push('/emp');
@@ -94,12 +112,11 @@ export default {
         togglePasswordVisibility() {
             this.passwordFieldType = this.passwordFieldType === 'password' ? 'text' : 'password';
         },
-        resetLoginForm(formName) {
-            this.$refs[formName].resetFields();
-            this.rememberMe = false;
-            localStorage.removeItem('savedAccount');
-            localStorage.removeItem('savedPassword');
-            localStorage.setItem('rememberMe', 'false');
+        clearAccount() {
+            this.loginForm.account = '';
+        },
+        clearPassword() {
+            this.loginForm.passwd = '';
         }
     }
 }
@@ -111,8 +128,14 @@ export default {
 }
 
 .toggle-password-button {
-    border: none; /* 去掉按钮边框 */
-    background: transparent; /* 设置背景透明 */
-    cursor: pointer; /* 鼠标指针变为手型 */
+    border: none;
+    background: transparent;
+    cursor: pointer;
+}
+
+.clear-button {
+    border: none;
+    background: transparent;
+    cursor: pointer;
 }
 </style>

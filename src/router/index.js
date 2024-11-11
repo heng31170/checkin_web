@@ -25,6 +25,12 @@ const routes = [
     name: 'register',
     component: () => import('../views/tlias/RegisterView.vue')
   }
+  ,
+  {
+    path: '/person',
+    name: 'person',
+    component: () => import('../views/tlias/PersonView.vue')
+  }
 ]
 
 const router = new VueRouter({

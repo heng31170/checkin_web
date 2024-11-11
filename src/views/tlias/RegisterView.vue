@@ -10,6 +10,9 @@
                     <el-form-item label="密码" prop="passwd">
                         <el-input type="password" v-model="registerForm.passwd" autocomplete="off"></el-input>
                     </el-form-item>
+                    <el-form-item label="确认密码" prop="confirmPasswd">
+                        <el-input type="password" v-model="registerForm.confirmPasswd" autocomplete="off"></el-input>
+                    </el-form-item>
                     <el-form-item label="姓名" prop="name">
                         <el-input v-model="registerForm.name" autocomplete="off"></el-input>
                     </el-form-item>
@@ -42,12 +45,14 @@
 import axios from "axios";
 import { API_URL } from "@/config";
 import moment from 'moment';
+
 export default {
     data() {
         return {
             registerForm: {
                 account: '',
                 passwd: '',
+                confirmPasswd: '',
                 name: '',
                 gender: '',
                 isManager: false,
@@ -61,6 +66,10 @@ export default {
                 passwd: [
                     { required: true, message: '请输入密码', trigger: 'blur' }
                 ],
+                confirmPasswd: [
+                    { required: true, message: '请确认密码', trigger: 'blur' },
+                    { validator: this.validatePasswd, trigger: 'blur' }
+                ],
                 name: [
                     { required: true, message: '请输入姓名', trigger: 'blur' }
                 ],
@@ -70,7 +79,7 @@ export default {
                 position: [
                     { required: true, message: '请输入职位', trigger: 'blur' }
                 ],
-                startDate: [
+                entryDate: [
                     { required: true, message: '请选择入职日期', trigger: 'change' }
                 ]
             }
@@ -78,21 +87,34 @@ export default {
     },
 
     methods: {
+        validatePasswd(rule, value, callback) {
+            if (value !== this.registerForm.passwd) {
+                callback(new Error('两次输入的密码不一致'));
+            } else {
+                callback();
+            }
+        },
         submitRegister() {
-            const formattedDate = moment(this.registerForm.entryDate).format('YYYY-MM-DD');
-            this.registerForm.entryDate = formattedDate;
+            this.$refs.registerForm.validate(valid => {
+                if (valid) {
+                    const formattedDate = moment(this.registerForm.entryDate).format('YYYY-MM-DD');
+                    this.registerForm.entryDate = formattedDate;
 
-            axios.post(`${API_URL}/api/emp/add`, this.registerForm)
-                .then(response => {
-                    this.$message.success("注册成功!");
-                    this.goToLogin(); // 注册成功后跳转到登录页面
-                })
-                .catch(error => {
-                    this.$message.error('注册失败，请重试');
-                });
+                    axios.post(`${API_URL}/api/emp/add`, this.registerForm)
+                        .then(response => {
+                            this.$message.success("注册成功!");
+                            this.goToLogin();
+                        })
+                        .catch(error => {
+                            this.$message.error('注册失败，请重试');
+                        });
+                } else {
+                    this.$message.error('表单输入有误，请检查');
+                }
+            });
         },
         goToLogin() {
-            this.$router.push('/login'); // 跳转到登录页面
+            this.$router.push('/login');
         },
     }
 }
@@ -100,6 +122,6 @@ export default {
 
 <style scoped>
 .demo-ruleForm {
-    width: 30%; /* 根据需要调整表单宽度 */
+    width: 30%;
 }
 </style>

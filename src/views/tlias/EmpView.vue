@@ -1,16 +1,31 @@
 <template>
     <div>
         <el-container style="height: 700px; border: 1px solid #eee">
-            <el-header style="font-size: 40px; background-color: rgb(238, 241, 246)">拔剑班打卡系统</el-header>
+            <el-header
+                style="font-size: 40px; background-color: rgb(238, 241, 246); display: flex; justify-content: space-between; align-items: center;">
+                <span
+                    style="display: block; width: 100%; text-align: center; transform: translateX(-50%); margin-left: 50%;">拔剑班打卡系统</span>
+                <!-- 菜单放置在右侧 -->
+                <el-menu :default-active="null" class="el-menu-demo" mode="horizontal" @select="handleSelect"
+                    style="margin-right: 10%;" id="delBgc">
+                    <el-submenu index="2">
+                        <template slot="title">Hello! {{ emp.name }} <img :src="emp.image"
+                                style="width: 40%; height: auto; border-radius: 50%;"></template>
+                        <el-menu-item index="2-1" @click="toPerson">个人中心</el-menu-item>
+                        <el-menu-item index="2-2" @click="dialogUpdatePasswdVisible = true">修改密码</el-menu-item>
+                        <el-menu-item index="2-3" @click="unlogin">登出</el-menu-item>
+                    </el-submenu>
+                </el-menu>
+            </el-header>
             <el-container>
                 <el-aside width="200px">
                     <el-menu :default-openeds="['1', '3']">
                         <el-submenu index="1">
                             <template slot="title"><i class="el-icon-message"></i>系统信息管理</template>
 
-                            <el-menu-item index="1-1">
+                            <!-- <el-menu-item index="1-1">
                             <router-link to="/login">登录管理</router-link>
-                            </el-menu-item>
+                            </el-menu-item> -->
                             <el-menu-item index="1-2">
                                 <router-link to="/emp">拔剑班管理</router-link>
                             </el-menu-item>
@@ -80,6 +95,30 @@
                         </el-table-column>
                     </el-table>
                     <!-- 结束表格   插入数据 -->
+
+                    <!-- 弹出更改密码对话框 -->
+                    <el-dialog title="修改密码" :visible.sync="dialogUpdatePasswdVisible">
+                        <el-form :model="EmpPasswd" status-icon :rules="rules" ref="EmpPasswd" label-width="100px"
+                            class="demo-ruleForm">
+
+                            <el-form-item label="原密码" prop="passwd">
+                                <el-input type="password" v-model="EmpPasswd.originPasswd"
+                                    autocomplete="off"></el-input>
+                            </el-form-item>
+                            <el-form-item label="新密码" prop="passwd">
+                                <el-input type="password" v-model="EmpPasswd.passwd" autocomplete="off"></el-input>
+                            </el-form-item>
+                            <el-form-item label="确认密码" prop="confirmPasswd">
+                                <el-input type="password" v-model="EmpPasswd.confirmPasswd"
+                                    autocomplete="off"></el-input>
+                            </el-form-item>
+                            <el-form-item>
+                                <el-button type="primary" @click="updatePasswd">确定</el-button>
+                                <el-button @click="dialogUpdatePasswdVisible = false">取消</el-button>
+                            </el-form-item>
+                        </el-form>
+                    </el-dialog>
+                    <!-- 结束更改密码对话框 -->
 
                     <!-- 弹出对话框,是否删除  -->
                     <el-dialog title="确定删除改员工?" :visible.sync="dialogDelVisible">
@@ -195,11 +234,18 @@
 <script>
 import axios from "axios";
 import { API_URL } from "@/config";
-import moment from 'moment';
+import moment, { updateLocale } from 'moment';
+import { mapGetters } from "vuex";
 export default {
     data() {
         return {
             tableData: [],
+            // 修改密码
+            EmpPasswd: {
+                originPasswd: '',
+                passwd: '',
+                confirmPasswd: '',
+            },
             // 条件查询
             searchEmp: {
                 name: "",
@@ -234,12 +280,76 @@ export default {
             dialogUnCheckVisible: false,
             dialogChangeEmpVisible: false,
             dialogAddEmpVisible: false,
+            dialogUpdatePasswdVisible: false,
             empId: null,
             isCheck: {},
             selectedFile: null,
         };
     },
+    computed: {
+        ...mapGetters(['getCurEmp']),
+        emp() {
+            return this.getCurEmp || {};
+        }
+    },
     methods: {
+        // 更新密码
+        updatePasswd() {
+            // 验证密码输入
+            if (!this.EmpPasswd.originPasswd || !this.EmpPasswd.passwd || !this.EmpPasswd.confirmPasswd) {
+                this.$message.error("原密码、新密码和确认密码不能为空");
+                return;
+            }
+
+            if (this.EmpPasswd.passwd !== this.EmpPasswd.confirmPasswd) {
+                this.$message.error("新密码和确认密码不一致");
+                return;
+            }
+            // 检查新密码是否包含空格
+            if (this.EmpPasswd.passwd.includes(" ")) {
+                this.$message.error("新密码不能包含空格");
+                return;
+            }
+            // 发送更新请求
+            axios
+                .post(`${API_URL}/api/passwd/update`, {
+                    id: this.emp.id, // 传递员工 ID
+                    originPasswd: this.EmpPasswd.originPasswd,
+                    passwd: this.EmpPasswd.passwd,
+                })
+                .then(response => {
+                    if (response.data) {
+                        this.$message.success("密码更新成功,请重新登录!");
+                        this.dialogUpdatePasswdVisible = false; // 关闭对话框
+                        this.resetPasswdForm(); // 重置表单
+                        this.unlogin();
+                    }
+                })
+                .catch(error => {
+                    if (error.response && error.response.data) {
+                        this.$message.error(error.response.data.message || "密码更新失败");
+                    } else {
+                        this.$message.error("密码更新失败");
+                    }
+                });
+        },
+
+        // 重置密码表单
+        resetPasswdForm() {
+            this.EmpPasswd.originPasswd = '';
+            this.EmpPasswd.passwd = '';
+            this.EmpPasswd.confirmPasswd = '';
+        },
+        handleSelect() {
+        },
+        // 个人中心
+        toPerson() {
+            this.$router.push('/person');
+        },
+        // 登出
+        unlogin() {
+            this.$router.replace('/login');
+        },
         // 确认新增员工
         confirmAddEmp() {
             const formattedDate = moment(this.AddEmp.entryDate).format('YYYY-MM-DD');
@@ -490,5 +600,9 @@ export default {
     height: 50px;
     border-radius: 50%;
     margin-top: 10px;
+}
+
+#delBgc {
+    background-color: transparent;
 }
 </style>
