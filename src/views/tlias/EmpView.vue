@@ -9,7 +9,7 @@
                 <el-menu :default-active="null" class="el-menu-demo" mode="horizontal" @select="handleSelect"
                     style="margin-right: 10%;" id="delBgc">
                     <el-submenu index="2">
-                        <template slot="title">Hello! {{ emp.name }} <img :src="emp.image"
+                        <template slot="title">Hello! {{ curEmp.name }} <img :src="curEmp.image"
                                 style="width: 40%; height: auto; border-radius: 50%;"></template>
                         <el-menu-item index="2-1" @click="toPerson">个人中心</el-menu-item>
                         <el-menu-item index="2-2" @click="dialogUpdatePasswdVisible = true">修改密码</el-menu-item>
@@ -234,12 +234,22 @@
 <script>
 import axios from "axios";
 import { API_URL } from "@/config";
-import moment, { updateLocale } from 'moment';
+import moment from 'moment';
 import { mapGetters } from "vuex";
 export default {
     data() {
         return {
             tableData: [],
+            // 当前员工
+            curEmp: {
+                account: "",
+                name: "",
+                gender: "",
+                position: "",
+                entryDate: "",
+                isManager: "",
+                image: "",
+            },
             // 修改密码
             EmpPasswd: {
                 originPasswd: '',
@@ -293,6 +303,7 @@ export default {
         }
     },
     methods: {
+
         // 更新密码
         updatePasswd() {
             // 验证密码输入
@@ -348,7 +359,13 @@ export default {
         },
         // 登出
         unlogin() {
-            this.$router.replace('/login');
+            // 清除 token
+            sessionStorage.removeItem('token');
+            // this.$router.replace('/login');
+            this.$router.push('/login').then(() => {
+                window.location.reload(); // 刷新页面
+            });
+
         },
         // 确认新增员工
         confirmAddEmp() {
@@ -488,6 +505,18 @@ export default {
             this.dialogDelVisible = false;
             this.$message.success("员工删除成功!")
         },
+        // 删除员工
+        delEmp(id) {
+            axios
+                .post(`${API_URL}/api/emp/delete?id=${id}`)
+                .then(() => {
+                    this.getEmp(); // 刷新
+                })
+                .catch((error) => {
+                    console.error("删除失败,请重试!", error);
+                    alert("删除失败!");
+                });
+        },
         // 签到对话框
         getIdAndCheckDialog(id) {
             this.empId = id;
@@ -510,6 +539,18 @@ export default {
             this.dialogUnCheckVisible = false;
             this.$message.success("取消签到成功!")
         },
+        // 获取当前个人信息
+        getPerson() {
+            this.empId = this.emp.id;
+            axios
+                .get(`${API_URL}/api/emp/${this.empId}`)
+                .then((response) => {
+                    this.curEmp = response.data;
+                })
+                .catch((error) => {
+                    console.error("获取员工信息失败", error);
+                })
+        },
 
         // 获取所有员工数据
         getEmp() {
@@ -518,41 +559,32 @@ export default {
                 size: this.pagination.pageSize
             }
             axios
-                .get(`${API_URL}/api/emp/page`, { params })
+                .get(`${API_URL}/api/emp/page`, {
+                    params,
+                })
                 .then((response) => {
                     this.tableData = response.data.records;
                     this.pagination.total = response.data.total;
                 })
                 .catch((error) => {
-                    console.log("请求失败:", error);
-                    alert("无法连接到API,请检查后端服务!");
+                    console.error("请求失败:", error);
+                    console.log("无法连接到API,请检查后端服务!");
                 });
         },
-        // 删除员工
-        delEmp(id) {
-            axios
-                .post(`${API_URL}/api/emp/delete?id=${id}`)
-                .then(() => {
-                    this.getEmp(); // 刷新
-                    // alert("删除成功!");
-                })
-                .catch((error) => {
-                    console.error("删除失败,请重试!", error);
-                    alert("删除失败!");
-                });
-        },
+
         // 获取打卡状态
         getAllCheck() {
             axios
-                .get(`${API_URL}/api/checkins`)
+                .get(`${API_URL}/api/checkins`, {
+                })
                 .then((response) => {
                     response.data.isCheck.forEach((item) => {
                         this.$set(this.isCheck, item.empId, item.isCheck);
                     });
                 })
                 .catch((error) => {
-                    console.log("获取签到信息失败:", error);
-                    alert(
+                    console.error("获取签到信息失败:", error);
+                    console.log(
                         "无法获取签到信息" +
                         (error.response ? error.response.data : error.message)
                     );
@@ -564,7 +596,6 @@ export default {
                 .post(`${API_URL}/api/addcheck?id=${id}`)
                 .then(() => {
                     this.getAllCheck();
-                    // alert("打卡成功!");
                 })
                 .catch((error) => {
                     alert("打卡失败!原因是：" + error);
@@ -576,7 +607,6 @@ export default {
                 .post(`${API_URL}/api/delcheck?id=${id}`)
                 .then(() => {
                     this.getAllCheck();
-                    // alert("取消打卡成功!");
                 })
                 .catch((error) => {
                     alert("取消打卡失败!原因是：" + error);
@@ -584,9 +614,16 @@ export default {
         },
     },
     mounted() {
-        this.getEmp();
-        this.getAllCheck();
-        // this.isCheck[11] = true;  // 员工 ID 为 1 已打卡
+        const token = sessionStorage.getItem('token'); // 获取存储的token
+        if (!token) { // 如果token为空，跳转到登录页面并刷新
+            this.$router.push('/login').then(() => {
+                window.location.reload(); // 刷新页面
+            });
+        } else { // 如果token存在，继续获取用户信息和员工数据
+            this.getPerson();
+            this.getEmp();
+            this.getAllCheck();
+        }
     },
 };
 </script>

@@ -3,16 +3,13 @@
         <el-container style="height: 700px; border: 1px solid #eee">
             <el-header style="font-size: 40px; background-color: rgb(238, 241, 246)">登录</el-header>
             <el-main style="display: flex; align-items: center; justify-content: center;">
-                <el-form :model="loginForm" status-icon :rules="rules" ref="loginForm" label-width="100px" class="demo-ruleForm">
+                <el-form :model="loginForm" status-icon :rules="rules" ref="loginForm" label-width="100px"
+                    class="demo-ruleForm">
                     <el-form-item label="账号" prop="account">
                         <el-input v-model="loginForm.account" autocomplete="off">
                             <template #append>
-                                <el-button 
-                                    v-if="loginForm.account" 
-                                    icon="el-icon-close" 
-                                    @click="clearAccount" 
-                                    size="small" 
-                                    class="clear-button">
+                                <el-button v-if="loginForm.account" icon="el-icon-close" @click="clearAccount"
+                                    size="small" class="clear-button">
                                 </el-button>
                             </template>
                         </el-input>
@@ -20,18 +17,11 @@
                     <el-form-item label="密码" prop="passwd">
                         <el-input v-model="loginForm.passwd" :type="passwordFieldType" autocomplete="off">
                             <template #append>
-                                <el-button 
-                                    icon="el-icon-view" 
-                                    @click="togglePasswordVisibility" 
-                                    size="small" 
+                                <el-button icon="el-icon-view" @click="togglePasswordVisibility" size="small"
                                     class="toggle-password-button">
                                 </el-button>
-                                <el-button 
-                                    v-if="loginForm.passwd" 
-                                    icon="el-icon-close" 
-                                    @click="clearPassword" 
-                                    size="small" 
-                                    class="clear-button">
+                                <el-button v-if="loginForm.passwd" icon="el-icon-close" @click="clearPassword"
+                                    size="small" class="clear-button">
                                 </el-button>
                             </template>
                         </el-input>
@@ -74,7 +64,7 @@ export default {
         const savedAccount = sessionStorage.getItem('savedAccount');
         const savedPassword = sessionStorage.getItem('savedPassword');
         const savedRememberMe = sessionStorage.getItem('rememberMe') === 'true';
-        
+
         if (savedAccount) {
             this.loginForm.account = savedAccount;
         }
@@ -88,8 +78,9 @@ export default {
             axios.post(`${API_URL}/api/login`, this.loginForm)
                 .then(response => {
                     this.$message.success("登录成功!");
-                    this.$store.dispatch('updateCurEmp',response.data.Emp);
-                    
+                    this.$store.dispatch('updateCurEmp', response.data.Emp);
+                    sessionStorage.setItem('token', response.data.jwt);  // 
+
                     if (this.rememberMe) {
                         sessionStorage.setItem('savedAccount', this.loginForm.account);
                         sessionStorage.setItem('savedPassword', this.loginForm.passwd);
@@ -100,7 +91,10 @@ export default {
                         sessionStorage.setItem('rememberMe', 'false');
                     }
 
-                    this.$router.push('/emp');
+                    // this.$router.push('/emp');
+                    this.$router.push('/emp').then(() => {
+                        window.location.reload(); // 刷新页面
+                    });
                 })
                 .catch(error => {
                     this.$message.error('登录失败!账号或密码错误');

@@ -113,7 +113,7 @@ export default {
         handleFileChange(file) {
             this.selectedFile = file.raw;
         },
-        // 获取个人信息
+        // 获取当前个人信息
         getPerson() {
             this.empId = this.emp.id;
             axios
@@ -122,7 +122,7 @@ export default {
                     this.curEmp = response.data;
                 })
                 .catch((error) => {
-                    log.error("获取员工信息失败", error);
+                    console.error("获取员工信息失败", error);
                 })
         },
         // 确认修改保存
@@ -166,7 +166,12 @@ export default {
         handleSelect() { },
         // 登出
         unlogin() {
-            this.$router.replace("/login");
+            // 清除 token
+            sessionStorage.removeItem('token');
+            // this.$router.replace('/login');
+            this.$router.push('/login').then(() => {
+                window.location.reload(); // 刷新页面
+            });
         },
     },
     mounted() {
@@ -180,7 +185,8 @@ export default {
     width: 80px;
     height: 80px;
     border-radius: 50%;
-    object-fit: cover;       /* 保持头像比例 */ 
+    object-fit: cover;
+    /* 保持头像比例 */
 }
 
 .avatar-placeholder {
@@ -195,8 +201,11 @@ export default {
     border: 1px dashed #d9d9d9;
     background-color: #f5f7fa;
 }
+
 .el-input__inner[readonly] {
-    cursor: not-allowed !important; /* 禁止光标样式 */
-    background-color: #f5f7fa; /* 可选：背景色 */
+    cursor: not-allowed !important;
+    /* 禁止光标样式 */
+    background-color: #f5f7fa;
+    /* 可选：背景色 */
 }
 </style>
