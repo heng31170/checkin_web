@@ -6,7 +6,7 @@
                 <el-form :model="loginForm" status-icon :rules="rules" ref="loginForm" label-width="100px"
                     class="demo-ruleForm">
                     <el-form-item label="账号" prop="account">
-                        <el-input v-model="loginForm.account" autocomplete="off">
+                        <el-input v-model="loginForm.account" autocomplete="off" @keyup.enter.native="submitLogin">
                             <template #append>
                                 <el-button v-if="loginForm.account" icon="el-icon-close" @click="clearAccount"
                                     size="small" class="clear-button">
@@ -15,7 +15,7 @@
                         </el-input>
                     </el-form-item>
                     <el-form-item label="密码" prop="passwd">
-                        <el-input v-model="loginForm.passwd" :type="passwordFieldType" autocomplete="off">
+                        <el-input v-model="loginForm.passwd" :type="passwordFieldType" autocomplete="off" @keyup.enter.native="submitLogin">
                             <template #append>
                                 <el-button icon="el-icon-view" @click="togglePasswordVisibility" size="small"
                                     class="toggle-password-button">
@@ -28,7 +28,7 @@
                     </el-form-item>
                     <el-form-item>
                         <el-checkbox v-model="rememberMe" style="float: left;"> 保存密码</el-checkbox>
-                        <el-button type="primary" @click="submitLogin()">登录</el-button>
+                        <el-button type="primary" @click="submitLogin">登录</el-button>
                         <el-button @click="goToRegister" type="text" style="margin-left: 20%;">注册</el-button>
                     </el-form-item>
                 </el-form>
@@ -92,7 +92,9 @@ export default {
                     }
 
                     // this.$router.push('/emp');
-                    this.$router.push('/emp').then(() => {
+                    // 判断用户角色
+                    const targetRoute = response.data.Emp.isManager ? '/emp' : 'cemp';
+                    this.$router.push(targetRoute).then(() => {
                         window.location.reload(); // 刷新页面
                     });
                 })

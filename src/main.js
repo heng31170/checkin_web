@@ -15,7 +15,7 @@ axios.defaults.headers.common['Content-Type'] = 'application/json';
 // 如果有token的需求，可以动态设置
 const mytoken = sessionStorage.getItem("token");
 if (mytoken) {
-  axios.defaults.headers.common['Authorization'] = `Bearer ${mytoken}`;
+  axios.defaults.headers.common['Authorization'] = `${mytoken}`;
 }
 
 new Vue({

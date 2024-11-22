@@ -61,6 +61,9 @@
                         <el-form-item>
                             <el-button type="primary" @click="dialogAddEmpVisible = true">新增员工</el-button>
                         </el-form-item>
+                        <el-form-item>
+                            <el-button type="primary" @click="exprotTable">导出签到表</el-button>
+                        </el-form-item>
                     </el-form>
 
                     <!-- 表格  插入数据？  -->
@@ -236,6 +239,7 @@ import axios from "axios";
 import { API_URL } from "@/config";
 import moment from 'moment';
 import { mapGetters } from "vuex";
+import * as XLSX from 'xlsx';
 export default {
     data() {
         return {
@@ -303,7 +307,22 @@ export default {
         }
     },
     methods: {
-
+        // 导出签到表
+        exprotTable() {
+            // 过滤 tableData，只保留所需字段
+            const filteredData = this.tableData.map(item => ({
+                账户: item.account,
+                姓名: item.name,
+                性别: item.gender,
+                职位: item.position,
+                打卡情况: this.isCheck[item.id] ? '已打卡' : '未打卡' // 根据 id 判断是否打卡
+            }));
+            const today = moment().format('YYYY-MM-DD');
+            const wb = XLSX.utils.book_new();
+            const ws = XLSX.utils.json_to_sheet(filteredData);
+            XLSX.utils.book_append_sheet(wb, ws, '签到表');
+            XLSX.writeFile(wb, `${today}_签到表.xlsx`);
+        },
         // 更新密码
         updatePasswd() {
             // 验证密码输入
@@ -616,7 +635,7 @@ export default {
     mounted() {
         const token = sessionStorage.getItem('token'); // 获取存储的token
         if (!token) { // 如果token为空，跳转到登录页面并刷新
-            this.$router.push('/login').then(() => {
+            this.$router.replace('/login').then(() => {
                 window.location.reload(); // 刷新页面
             });
         } else { // 如果token存在，继续获取用户信息和员工数据

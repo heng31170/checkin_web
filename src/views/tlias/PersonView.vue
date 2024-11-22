@@ -14,10 +14,10 @@
                     text-align: center;
                     transform: translateX(-50%);
                     margin-left: 50%;
-                ">拔剑班打卡系统</span>
+                ">{{ curEmp.isManager? '拔尖班打卡系统' : '个人打卡系统' }}</span>
                 <el-menu :default-active="null" class="el-menu-demo" mode="horizontal" @select="handleSelect">
                     <el-submenu index="2">
-                        <template #title>Hello! {{ emp.name }}</template>
+                        <template #title>Hello! {{ curEmp.name }}</template>
                         <el-menu-item index="2-1">个人中心</el-menu-item>
                         <el-menu-item index="2-2">修改密码</el-menu-item>
                         <el-menu-item index="2-3" @click="unlogin">登出</el-menu-item>
@@ -60,7 +60,7 @@
                             </el-select>
                         </el-form-item>
                         <el-form-item label="是否管理员" prop="isManager">
-                            <el-switch v-model="curEmp.isManager"></el-switch>
+                            <el-switch v-model="curEmp.isManager" disabled></el-switch>
                         </el-form-item>
                         <el-form-item label="职位" prop="position">
                             <el-input v-model="curEmp.position" autocomplete="off"></el-input>
@@ -161,7 +161,7 @@ export default {
         },
         // 返回
         goBack() {
-            this.$router.push("/emp");
+            this.$router.go(-1);
         },
         handleSelect() { },
         // 登出
